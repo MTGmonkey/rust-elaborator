@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+fuzzy-matcher = { version = "0.3.7", features = ["compact"] }
+reqwest = { version = "0.12.20", features = ["json"] }
+serde = { version = "1.0.219", features = ["derive"] }
+serde-xml-rs = "0.8.1"
+tokio = { version = "1.45.1", features = ["full"] }
