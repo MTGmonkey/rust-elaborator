@@ -9,6 +9,8 @@ pub struct Id_search_results {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Boardgame {
+    #[serde(rename = "@objectid")]
+    pub objectid: i32,
     pub minplayers: i32,
     pub maxplayers: i32,
     pub playingtime: i32,
