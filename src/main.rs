@@ -1,3 +1,4 @@
+use clap::Parser;
 use reqwest::header::USER_AGENT;
 use rust_elaborator::*;
 use std::io;
@@ -6,7 +7,12 @@ use std::io::prelude::*;
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
     println!("Welcome to rust_elaborator!");
-    write_csv().await;
+    let args = Args::parse();
+    match args.mode.as_str() {
+        "elaborate" => make_out_from_in().await,
+        "expand" => make_out_from_out().await,
+        _ => panic!(),
+    };
     Ok(())
 }
 
@@ -130,31 +136,7 @@ fn find_best_boardgame(
     )
 }
 
-fn find_best_match(name: String, mut names: Vec<&String>) -> (String, i32) {
-    use fuzzy_matcher::FuzzyMatcher;
-    let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
-    names.sort_unstable_by(|a, b| {
-        matcher
-            .fuzzy_match(a, &name)
-            .cmp(&matcher.fuzzy_match(b, &name))
-    });
-    (
-        names[0].to_string(),
-        matcher.fuzzy_match(&names[0], &name).unwrap(),
-    )
-}
-
-fn read_csv() -> Result<(), Box<dyn std::error::Error>> {
-    let mut reader = csv::Reader::from_reader(io::stdin());
-    for result in reader.records() {
-        let record = result.unwrap();
-        let game = &record[0];
-        println!("Game: {}", game);
-    }
-    Ok(())
-}
-
-async fn write_csv() -> Result<(), Box<dyn std::error::Error>> {
+async fn make_out_from_in() -> Result<(), Box<dyn std::error::Error>> {
     use std::fs::File;
     use std::io::prelude::*;
     let mut out = File::create("out.csv").unwrap();
@@ -179,32 +161,32 @@ async fn write_csv() -> Result<(), Box<dyn std::error::Error>> {
         let boardgame = get_boardgame_from_name(&client, game.to_string()).await;
         match boardgame {
             Some(boardgame) => {
-                let minplayers = if (boardgame.minplayers != 0) {
+                let minplayers = if boardgame.minplayers != 0 {
                     boardgame.minplayers.to_string()
                 } else {
                     "".to_string()
                 };
-                let maxplayers = if (boardgame.maxplayers != 0) {
+                let maxplayers = if boardgame.maxplayers != 0 {
                     boardgame.maxplayers.to_string()
                 } else {
                     "".to_string()
                 };
-                let playingtime = if (boardgame.playingtime != 0) {
+                let playingtime = if boardgame.playingtime != 0 {
                     boardgame.playingtime.to_string()
                 } else {
                     "".to_string()
                 };
-                let minplaytime = if (boardgame.minplaytime != 0) {
+                let minplaytime = if boardgame.minplaytime != 0 {
                     boardgame.minplaytime.to_string()
                 } else {
                     "".to_string()
                 };
-                let maxplaytime = if (boardgame.maxplaytime != 0) {
+                let maxplaytime = if boardgame.maxplaytime != 0 {
                     boardgame.maxplaytime.to_string()
                 } else {
                     "".to_string()
                 };
-                let age = if (boardgame.age != 0) {
+                let age = if boardgame.age != 0 {
                     boardgame.age.to_string()
                 } else {
                     "".to_string()
@@ -230,6 +212,92 @@ async fn write_csv() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap(),
         };
         writer.flush();
+    }
+    Ok(())
+}
+
+async fn make_out_from_out() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs::File;
+    let mut out = File::create("out.csv").unwrap();
+    let mut writer = csv::Writer::from_writer(out);
+    let mut reader = csv::Reader::from_reader(io::stdin());
+    writer
+        .write_record(&[
+            "title",
+            "foundtitle",
+            "minplayers",
+            "maxplayers",
+            "playingtime",
+            "minplaytime",
+            "maxplaytime",
+            "age",
+        ])
+        .unwrap();
+    let client = reqwest::Client::new();
+    for result in reader.records() {
+        let record = result.unwrap();
+        let title = &record[0];
+        let foundtitle = &record[1];
+        if foundtitle == "" || foundtitle == "NOT_FOUND" {
+            let boardgame = get_boardgame_from_name(&client, title.to_string()).await;
+            match boardgame {
+                Some(boardgame) => {
+                    let minplayers = if boardgame.minplayers != 0 {
+                        boardgame.minplayers.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let maxplayers = if boardgame.maxplayers != 0 {
+                        boardgame.maxplayers.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let playingtime = if boardgame.playingtime != 0 {
+                        boardgame.playingtime.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let minplaytime = if boardgame.minplaytime != 0 {
+                        boardgame.minplaytime.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let maxplaytime = if boardgame.maxplaytime != 0 {
+                        boardgame.maxplaytime.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    let age = if boardgame.age != 0 {
+                        boardgame.age.to_string()
+                    } else {
+                        "".to_string()
+                    };
+                    writer
+                        .write_record(&[
+                            title,
+                            get_name_from_name(&client, title.to_string())
+                                .await
+                                .unwrap()
+                                .as_str(),
+                            minplayers.as_str(),
+                            maxplayers.as_str(),
+                            playingtime.as_str(),
+                            minplaytime.as_str(),
+                            maxplaytime.as_str(),
+                            age.as_str(),
+                        ])
+                        .unwrap()
+                }
+                None => writer
+                    .write_record(&[title, "NOT_FOUND", "", "", "", "", "", ""])
+                    .unwrap(),
+            };
+        } else {
+            writer.write_record(&[
+                &record[0], &record[1], &record[2], &record[3], &record[4], &record[5], &record[6],
+                &record[7],
+            ]);
+        };
     }
     Ok(())
 }

@@ -45,3 +45,9 @@ Uno,
 where `title` can be anything.
 Capitalization does not matter.
 Additional columns will not be present in `out.csv`.
+
+If you have an existing `out.csv`, you can add new rows and avoid recalling the rows that are already filled in with the flag `--mode expand`.
+
+`cat out.csv | nix run . -- --mode expand`
+
+This will only check rows that have a) a blank second column or b) NOT_FOUND in the second column.

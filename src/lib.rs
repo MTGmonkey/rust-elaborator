@@ -1,6 +1,12 @@
-use reqwest::Error;
-use reqwest::header::USER_AGENT;
+use clap::Parser;
 use serde::{Deserialize, Serialize};
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    #[arg(short, long, default_value_t = ("elaborate".to_string()))]
+    pub mode: String,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Id_search_results {
