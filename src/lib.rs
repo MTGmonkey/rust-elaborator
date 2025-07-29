@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    #[arg(short, long, default_value_t = ("elaborate".to_string()))]
+    #[arg(short, long, default_value_t = ("infer".to_string()))]
     pub mode: String,
 }
 

@@ -2,7 +2,7 @@ use clap::Parser;
 use reqwest::header::USER_AGENT;
 use rust_elaborator::*;
 use std::io;
-use std::io::prelude::*;
+use std::mem::drop;
 
 #[tokio::main]
 async fn main() -> Result<(), reqwest::Error> {
@@ -11,6 +11,13 @@ async fn main() -> Result<(), reqwest::Error> {
     match args.mode.as_str() {
         "elaborate" => make_out_from_in().await,
         "expand" => make_out_from_out().await,
+        "infer" => {
+            if std::fs::exists("out.csv").unwrap() {
+                make_out_from_out().await
+            } else {
+                make_out_from_in().await
+            }
+        }
         _ => panic!(),
     };
     Ok(())
@@ -137,11 +144,13 @@ fn find_best_boardgame(
 }
 
 async fn make_out_from_in() -> Result<(), Box<dyn std::error::Error>> {
+    println!("making out.csv from in.csv");
     use std::fs::File;
     use std::io::prelude::*;
-    let mut out = File::create("out.csv").unwrap();
+    let mut out = File::create_new("out.csv").unwrap();
+    let mut inn = File::open("in.csv").unwrap();
     let mut writer = csv::Writer::from_writer(out);
-    let mut reader = csv::Reader::from_reader(io::stdin());
+    let mut reader = csv::Reader::from_reader(inn);
     writer
         .write_record(&[
             "title",
@@ -217,10 +226,13 @@ async fn make_out_from_in() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn make_out_from_out() -> Result<(), Box<dyn std::error::Error>> {
+    println!("making out.csv from out.csv");
     use std::fs::File;
+    std::fs::copy("out.csv", "copy.csv").unwrap();
+    let mut copy = File::open("copy.csv").unwrap();
+    let mut reader = csv::Reader::from_reader(copy);
     let mut out = File::create("out.csv").unwrap();
     let mut writer = csv::Writer::from_writer(out);
-    let mut reader = csv::Reader::from_reader(io::stdin());
     writer
         .write_record(&[
             "title",
@@ -286,7 +298,7 @@ async fn make_out_from_out() -> Result<(), Box<dyn std::error::Error>> {
                             maxplaytime.as_str(),
                             age.as_str(),
                         ])
-                        .unwrap()
+                        .unwrap();
                 }
                 None => writer
                     .write_record(&[title, "NOT_FOUND", "", "", "", "", "", ""])
@@ -299,5 +311,6 @@ async fn make_out_from_out() -> Result<(), Box<dyn std::error::Error>> {
             ]);
         };
     }
+    std::fs::remove_file("copy.csv");
     Ok(())
 }
